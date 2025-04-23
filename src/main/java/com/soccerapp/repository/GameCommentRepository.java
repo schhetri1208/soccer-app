@@ -1,13 +1,12 @@
 package com.soccerapp.repository;
 
-import com.soccerapp.model.Game;
+import com.soccerapp.model.GameComment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public interface GameRepository extends JpaRepository<Game, Long> {
-
-    List<Game> findByGroupId(Long groupId);
+public interface GameCommentRepository extends JpaRepository<GameComment, Long> {
+    List<GameComment> findByGameId(Long id);
 }

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -21,6 +22,8 @@ public class GameService {
     private GroupRepository groupRepository;
     private UserRepository userRepository;
     private GameRepository gameRepository;
+
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm a");
 
     public GameService(GroupRepository groupRepository, UserRepository userRepository, GameRepository gameRepository) {
         this.groupRepository = groupRepository;
@@ -35,20 +38,20 @@ public class GameService {
         Game game = new Game();
         game.setGroup(group);
         game.setCreatedBy(creator);
-        game.setGameDate(LocalDate.now().with(DayOfWeek.valueOf(request.day().toUpperCase())));
-        game.setGameTime(LocalTime.parse(request.time()));
+        game.setGameDate(LocalDate.parse((request.date())));
+        game.setGameTime(LocalTime.parse(request.time(),formatter));
         game.setLocation(request.location());
         game.setFieldLat(request.lat());
         game.setFieldLng(request.lng());
 
         gameRepository.save(game);
 
-        return new GameResponse(game.getId(), game.getGameDate().toString(),game.getGameTime().toString(), game.getLocation(), creator.getFirstName());
+        return new GameResponse(game.getId(), game.getGameDate().toString(),game.getGameTime().format(formatter), game.getLocation(), creator.getFirstName());
     }
 
     public List<GameResponse> getGameForGroup(Long groupId) {
-        return gameRepository.getGameByGroup(groupId).stream()
-                .map(g -> new GameResponse(g.getId(), g.getGameDate().toString() , g.getGameDate().toString() , g.getLocation() , g.getCreatedBy().getFirstName()))
+        return gameRepository.findByGroupId(groupId).stream()
+                .map(g -> new GameResponse(g.getId(), g.getGameDate().toString() , g.getGameTime().format(formatter) , g.getLocation() , g.getCreatedBy().getFirstName()))
                 .toList();
     }
 }

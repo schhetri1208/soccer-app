@@ -15,7 +15,7 @@ import java.util.List;
 @RequestMapping("/api/groups")
 public class GroupController {
 
-    private GroupService groupService;
+    private final GroupService groupService;
 
     private final JwtUtil jwtUtil;
 
