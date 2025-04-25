@@ -1,9 +1,11 @@
 package com.soccerapp.controller;
 
+import com.soccerapp.model.GameParticipant;
 import com.soccerapp.model.Group;
 import com.soccerapp.security.JwtUtil;
 import com.soccerapp.service.GroupService;
 import com.soccerapp.service.dto.AddMemberRequest;
+import com.soccerapp.service.dto.AssignTeamRequest;
 import com.soccerapp.service.dto.CreateGroupRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -52,4 +54,5 @@ public class GroupController {
         String email = jwtUtil.getEmailFromToken(token.substring(7));
         return ResponseEntity.ok(groupService.getAllMembersOfGroup(groupId));
     }
+
 }

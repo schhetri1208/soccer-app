@@ -2,6 +2,7 @@ package com.soccerapp.controller;
 
 import com.soccerapp.model.Game;
 import com.soccerapp.model.GameComment;
+import com.soccerapp.model.GameParticipant;
 import com.soccerapp.repository.GameParticipantRepository;
 import com.soccerapp.security.JwtUtil;
 import com.soccerapp.service.GameCommentService;
@@ -89,5 +90,15 @@ public class GameController {
         String email = jwtUtil.getEmailFromToken(token.substring(7));
         gameCommentService.likeComment(commentId);
         return ResponseEntity.ok("Liked");
+    }
+
+    @PostMapping("/{gameId}/assign-team")
+    public ResponseEntity<String> assignTeam(@RequestHeader("Authorization") String token,
+                                                      @PathVariable Long gameId,
+                                                      @RequestBody AssignTeamRequest request) {
+
+        String email = jwtUtil.getEmailFromToken(token.substring(7));
+        gameService.assignTeam(gameId, request);
+        return ResponseEntity.ok("Team assigned successfully");
     }
 }
