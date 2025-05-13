@@ -1,16 +1,16 @@
 package com.soccerapp.service;
 
 import com.soccerapp.model.*;
-import com.soccerapp.repository.GameParticipantRepository;
-import com.soccerapp.repository.GameRepository;
-import com.soccerapp.repository.GroupRepository;
-import com.soccerapp.repository.UserRepository;
+import com.soccerapp.repository.*;
 import com.soccerapp.service.dto.AssignTeamRequest;
 import com.soccerapp.service.dto.CreateGameRequest;
 import com.soccerapp.service.dto.GameResponse;
+import com.soccerapp.service.dto.GameUpdateRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import org.springframework.security.access.AccessDeniedException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -23,17 +23,22 @@ public class GameService {
     private final UserRepository userRepository;
     private final GameRepository gameRepository;
     private final GameParticipantRepository gameParticipantRepository;
+    private final GroupMemberRepository groupMemberRepository;
 
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private SendGridService sendGridService;
+
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm a");
 
-    public GameService(GroupRepository groupRepository, UserRepository userRepository, GameRepository gameRepository, GameParticipantRepository gameParticipantRepository) {
+    public GameService(GroupRepository groupRepository, UserRepository userRepository, GameRepository gameRepository, GameParticipantRepository gameParticipantRepository, GroupMemberRepository groupMemberRepository) {
         this.groupRepository = groupRepository;
         this.userRepository = userRepository;
         this.gameRepository = gameRepository;
         this.gameParticipantRepository = gameParticipantRepository;
+        this.groupMemberRepository = groupMemberRepository;
     }
 
     public GameResponse scheduleGame(CreateGameRequest request, String creatorEmail) {
@@ -50,6 +55,18 @@ public class GameService {
         game.setFieldLng(request.lng());
 
         gameRepository.save(game);
+
+        List<GroupMember> members = groupMemberRepository.findByGroupId(request.groupId());
+
+        for (GroupMember groupMember : members) {
+            String email = groupMember.getUser().getEmail();
+            try {
+                String htmlBody = sendGridService.buildGameEmail(game, groupMember.getUser().getFirstName());
+                sendGridService.sendEmail(email, "📢 New Game Scheduled!", htmlBody);
+            } catch (IOException e) {
+                System.out.println("Failed to send email to " + email + ": " + e.getMessage());
+            }
+        }
 
         notificationService.sendNotification(request.groupId(),"New game scheduled for " + game.getGameDate() + " at " + game.getLocation());
 
@@ -68,5 +85,29 @@ public class GameService {
         GameParticipant participant = gameParticipantRepository.findById(id).orElseThrow(() -> new RuntimeException("User has not RSVPed for this game."));
         participant.setTeam(request.team().toUpperCase());
         gameParticipantRepository.save(participant);
+    }
+
+    public void updateGame(Long gameId, GameUpdateRequest request, String email) {
+        Game game = gameRepository.findById(gameId).orElseThrow();
+        if (!game.getCreatedBy().getEmail().equals(email)) {
+            throw new AccessDeniedException("Only the creator can update the game.");
+        }
+        game.setGameDate(request.gameDate());
+        game.setGameTime(request.gameTime());
+        game.setLocation(request.location());
+
+        gameRepository.save(game);
+
+        notificationService.sendNotification(game.getGroup().getId(), "Game updated: " + game.getLocation() + " on " + game.getGameDate());
+    }
+
+    public void cancelGame(Long gameId, String userEmail) {
+        Game game = gameRepository.findById(gameId).orElseThrow();
+        if (!game.getCreatedBy().getEmail().equals(userEmail)) {
+            throw new AccessDeniedException("Only the creator can cancel the game.");
+        }
+        gameRepository.delete(game);
+
+        notificationService.sendNotification(game.getGroup().getId(), "Game canceled: " + game.getLocation() + " on " + game.getGameDate());
     }
 }

@@ -9,6 +9,8 @@ import com.soccerapp.service.GameCommentService;
 import com.soccerapp.service.GameParticipantService;
 import com.soccerapp.service.GameService;
 import com.soccerapp.service.dto.*;
+import com.soccerapp.util.RequestUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,74 +33,108 @@ public class GameController {
     }
 
     @PostMapping
-    public ResponseEntity<GameResponse> scheduleGame (@RequestHeader ("Authorization") String token,
+    public ResponseEntity<GameResponse> scheduleGame (HttpServletRequest httpServletRequest,
                                                       @RequestBody CreateGameRequest request) {
-        String email = jwtUtil.getEmailFromToken(token.substring(7));
+        String email = RequestUtil.getEmail(httpServletRequest);
 
         return ResponseEntity.ok(gameService.scheduleGame(request, email));
     }
 
     @GetMapping("/group/{groupId}")
-    public ResponseEntity<List<GameResponse>> getGameForGroup(@RequestHeader ("Authorization") String token,
+    public ResponseEntity<List<GameResponse>> getGameForGroup(HttpServletRequest httpServletRequest,
                                                               @PathVariable Long groupId) {
-        String email = jwtUtil.getEmailFromToken(token.substring(7));
+        String email = RequestUtil.getEmail(httpServletRequest);
         return ResponseEntity.ok(gameService.getGameForGroup(groupId));
     }
 
     @PostMapping("/{gameId}/rsvp")
-    public ResponseEntity<String> rsvpToGame(@PathVariable Long gameId,
-                                             @RequestHeader("Authorization") String token,
+    public ResponseEntity<String> rsvpToGame(HttpServletRequest httpServletRequest,
+                                             @PathVariable Long gameId,
                                              @RequestBody RsvpRequest request) {
-        String email = jwtUtil.getEmailFromToken(token.substring(7));
+        String email = RequestUtil.getEmail(httpServletRequest);
         gameParticipantService.rsvpToGame(email,gameId, request);
         System.out.println("Received status: " + request.status());
         return ResponseEntity.ok("RSVP recorded.");
     }
 
     @PostMapping("/{gameId}/comments")
-    public ResponseEntity<String> addComment(@RequestHeader("Authorization") String token,
+    public ResponseEntity<String> addComment(HttpServletRequest httpServletRequest,
                                                   @PathVariable Long gameId,
                                                   @RequestBody GameCommentRequest request) {
-        String email = jwtUtil.getEmailFromToken(token.substring(7));
+        String email = RequestUtil.getEmail(httpServletRequest);
         gameCommentService.addComment(gameId, request.content(), null,email);
         return ResponseEntity.ok("Comment added");
     }
 
     //Reply a comment
     @PostMapping("/{gameId}/comments/{parentId}")
-    public ResponseEntity<String> replyComment(@RequestHeader("Authorization") String token,
+    public ResponseEntity<String> replyComment(HttpServletRequest httpServletRequest,
                                              @PathVariable Long gameId,
                                                @PathVariable Long parentId,
                                              @RequestBody GameCommentRequest request) {
-        String email = jwtUtil.getEmailFromToken(token.substring(7));
+        String email = RequestUtil.getEmail(httpServletRequest);
         gameCommentService.addComment(gameId, request.content(), parentId,email);
         return ResponseEntity.ok("Reply added ");
     }
 
     //Get all comments
     @GetMapping("/{gameId}/comments")
-    public ResponseEntity<List<CommentResponse>> getComments(@RequestHeader ("Authorization") String token,
+    public ResponseEntity<List<CommentResponse>> getComments(HttpServletRequest httpServletRequest,
                                                                  @PathVariable Long gameId) {
-        String email = jwtUtil.getEmailFromToken(token.substring(7));
+        String email = RequestUtil.getEmail(httpServletRequest);
         return ResponseEntity.ok(gameCommentService.getThreadedComments(gameId));
     }
 
     //Like comment
     @PutMapping("/comments/{commentId}/like")
-    public ResponseEntity<?> likeComment (@RequestHeader ("Authorization") String token,
+    public ResponseEntity<?> likeComment (HttpServletRequest httpServletRequest,
                                                         @PathVariable Long commentId) {
-        String email = jwtUtil.getEmailFromToken(token.substring(7));
+        String email = RequestUtil.getEmail(httpServletRequest);
         gameCommentService.likeComment(commentId);
         return ResponseEntity.ok("Liked");
     }
 
     @PostMapping("/{gameId}/assign-team")
-    public ResponseEntity<String> assignTeam(@RequestHeader("Authorization") String token,
+    public ResponseEntity<String> assignTeam(HttpServletRequest httpServletRequest,
                                                       @PathVariable Long gameId,
                                                       @RequestBody AssignTeamRequest request) {
 
-        String email = jwtUtil.getEmailFromToken(token.substring(7));
+        String email = RequestUtil.getEmail(httpServletRequest);
         gameService.assignTeam(gameId, request);
         return ResponseEntity.ok("Team assigned successfully");
+    }
+
+    @PutMapping("/{gameId}")
+    public ResponseEntity<String> updateGame(HttpServletRequest httpServletRequest,
+                                             @PathVariable Long gameId,
+                                             @RequestBody GameUpdateRequest request) {
+        String email = RequestUtil.getEmail(httpServletRequest);
+        gameService.updateGame(gameId, request, email);
+        return ResponseEntity.ok("Game updated successfully.");
+    }
+
+    @DeleteMapping("/{gameId}")
+    public ResponseEntity<String> deleteGame(HttpServletRequest httpServletRequest,
+                                             @PathVariable Long gameId) {
+        String email = RequestUtil.getEmail(httpServletRequest);
+        gameService.cancelGame(gameId, email);
+        return ResponseEntity.ok("Game cancelled successfully.");
+    }
+
+    @PutMapping("/comments/{commentId}")
+    public ResponseEntity<String> updateComment(HttpServletRequest httpServletRequest,
+                                             @PathVariable Long commentId,
+                                             @RequestBody String content) {
+        String email = RequestUtil.getEmail(httpServletRequest);
+        gameCommentService.editComment(commentId, content, email);
+        return ResponseEntity.ok("Comments updated successfully.");
+    }
+
+    @DeleteMapping("/comments/{commentId}")
+    public ResponseEntity<String> deleteComment(HttpServletRequest httpServletRequest,
+                                                @PathVariable Long commentId) {
+        String email = RequestUtil.getEmail(httpServletRequest);
+        gameCommentService.deleteComment(commentId, email);
+        return ResponseEntity.ok("Comments deleted successfully.");
     }
 }

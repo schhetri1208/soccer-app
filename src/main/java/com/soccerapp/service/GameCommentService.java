@@ -10,6 +10,7 @@ import com.soccerapp.service.dto.CommentResponse;
 import com.soccerapp.service.dto.GameResponse;
 import org.springframework.stereotype.Service;
 
+import org.springframework.security.access.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -71,5 +72,22 @@ public class GameCommentService {
             }
         }
         return topLevelComment;
+    }
+
+    public void editComment(Long commentId, String content, String userEmail) {
+        GameComment comment = gameCommentRepository.findById(commentId).orElseThrow();
+        if(!comment.getUser().getEmail().equals(userEmail)){
+            throw new AccessDeniedException("You can only edit your own comments.");
+        }
+        comment.setContent(content);
+        gameCommentRepository.save(comment);
+    }
+
+    public void deleteComment(Long commentId, String userEmail) {
+        GameComment comment = gameCommentRepository.findById(commentId).orElseThrow();
+        if(!comment.getUser().getEmail().equals(userEmail)){
+            throw new AccessDeniedException("You can only delete your own comments.");
+        }
+        gameCommentRepository.delete(comment);
     }
 }

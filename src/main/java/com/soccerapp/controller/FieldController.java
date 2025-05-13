@@ -3,6 +3,8 @@ package com.soccerapp.controller;
 import com.soccerapp.security.JwtUtil;
 import com.soccerapp.service.FieldService;
 import com.soccerapp.service.dto.CreateFieldRequest;
+import com.soccerapp.util.RequestUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import com.soccerapp.service.dto.FieldResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -23,17 +25,17 @@ public class FieldController {
     }
 
     @PostMapping
-    public ResponseEntity<String> addField(@RequestHeader("Authorization") String token,
+    public ResponseEntity<String> addField(HttpServletRequest httpServletRequest,
                                            @RequestBody CreateFieldRequest request) {
-        String email = jwtUtil.getEmailFromToken(token.substring(7));
+        String email = RequestUtil.getEmail(httpServletRequest);
         fieldService.addField(request);
         return ResponseEntity.ok("Field added successfully");
     }
 
     @GetMapping("/city/{city}")
-    public ResponseEntity <List<FieldResponse>> getFieldsByCity(@RequestHeader("Authorization") String token,
+    public ResponseEntity <List<FieldResponse>> getFieldsByCity(HttpServletRequest httpServletRequest,
                                                                 @PathVariable String city) {
-        String email = jwtUtil.getEmailFromToken(token.substring(7));
+        String email = RequestUtil.getEmail(httpServletRequest);
         return ResponseEntity.ok(fieldService.getFieldsByCity(city));
     }
 }
