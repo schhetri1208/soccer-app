@@ -124,9 +124,9 @@ public class GameController {
     @PutMapping("/comments/{commentId}")
     public ResponseEntity<String> updateComment(HttpServletRequest httpServletRequest,
                                              @PathVariable Long commentId,
-                                             @RequestBody String content) {
+                                             @RequestBody CommentUpdateRequest request) {
         String email = RequestUtil.getEmail(httpServletRequest);
-        gameCommentService.editComment(commentId, content, email);
+        gameCommentService.editComment(commentId, request.content(), email);
         return ResponseEntity.ok("Comments updated successfully.");
     }
 

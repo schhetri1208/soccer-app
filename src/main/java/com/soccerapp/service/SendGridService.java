@@ -37,7 +37,7 @@ public class SendGridService {
     public void sendEmail(String sendTo, String subject, String content) throws IOException {
         Email from = new Email("sahil.budhathoki25@gmail.com");
         Email toEmail = new Email(sendTo);
-        Content body = new Content("text/plain", content);
+        Content body = new Content("text/html", content);
 
         Mail mail = new Mail(from, subject, toEmail, body);
         SendGrid sg = new SendGrid(SENDGRID_API_KEY);

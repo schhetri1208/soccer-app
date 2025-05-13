@@ -31,8 +31,8 @@ public class GameService {
     @Autowired
     private SendGridService sendGridService;
 
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm a");
-
+    private static final DateTimeFormatter TIME_FORMATTER  = DateTimeFormatter.ofPattern("h:mm a");
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MM-dd-yyyy");
     public GameService(GroupRepository groupRepository, UserRepository userRepository, GameRepository gameRepository, GameParticipantRepository gameParticipantRepository, GroupMemberRepository groupMemberRepository) {
         this.groupRepository = groupRepository;
         this.userRepository = userRepository;
@@ -49,7 +49,7 @@ public class GameService {
         game.setGroup(group);
         game.setCreatedBy(creator);
         game.setGameDate(LocalDate.parse((request.date())));
-        game.setGameTime(LocalTime.parse(request.time(),formatter));
+        game.setGameTime(LocalTime.parse(request.time(),TIME_FORMATTER));
         game.setLocation(request.location());
         game.setFieldLat(request.lat());
         game.setFieldLng(request.lng());
@@ -70,12 +70,12 @@ public class GameService {
 
         notificationService.sendNotification(request.groupId(),"New game scheduled for " + game.getGameDate() + " at " + game.getLocation());
 
-        return new GameResponse(game.getId(), game.getGameDate().toString(),game.getGameTime().format(formatter), game.getLocation(), creator.getFirstName());
+        return new GameResponse(game.getId(), game.getGameDate().format(DATE_FORMATTER),game.getGameTime().format(TIME_FORMATTER), game.getLocation(), creator.getFirstName());
     }
 
     public List<GameResponse> getGameForGroup(Long groupId) {
         return gameRepository.findByGroupId(groupId).stream()
-                .map(g -> new GameResponse(g.getId(), g.getGameDate().toString() , g.getGameTime().format(formatter) , g.getLocation() , g.getCreatedBy().getFirstName()))
+                .map(g -> new GameResponse(g.getId(), g.getGameDate().format(DATE_FORMATTER) , g.getGameTime().format(TIME_FORMATTER) , g.getLocation() , g.getCreatedBy().getFirstName()))
                 .toList();
     }
 
@@ -98,7 +98,22 @@ public class GameService {
 
         gameRepository.save(game);
 
-        notificationService.sendNotification(game.getGroup().getId(), "Game updated: " + game.getLocation() + " on " + game.getGameDate());
+        notificationService.sendNotification(game.getGroup().getId(), "Game updated: " + game.getLocation() + " on " + game.getGameDate().format(DATE_FORMATTER));
+
+        List<GroupMember> members = groupMemberRepository.findByGroupId(game.getGroup().getId());
+
+        for (GroupMember groupMember : members) {
+            User user = groupMember.getUser();
+            String userEmail = user.getEmail();
+
+            try {
+                String htmlBody = sendGridService.buildGameEmail(game, user.getFirstName());
+                sendGridService.sendEmail(email, "Game Updated!", htmlBody);
+            } catch (IOException e) {
+                System.out.println("Failed to send email to " + email + ": " + e.getMessage());
+            }
+        }
+
     }
 
     public void cancelGame(Long gameId, String userEmail) {
@@ -108,6 +123,6 @@ public class GameService {
         }
         gameRepository.delete(game);
 
-        notificationService.sendNotification(game.getGroup().getId(), "Game canceled: " + game.getLocation() + " on " + game.getGameDate());
+        notificationService.sendNotification(game.getGroup().getId(), "Game canceled: " + game.getLocation() + " on " + game.getGameDate().format(DATE_FORMATTER));
     }
 }
